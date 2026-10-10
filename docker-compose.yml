@@ -1,0 +1,43 @@
+services:
+  api:
+    build: ./server
+    restart: unless-stopped
+    environment:
+      QP_API_KEY: ${QP_API_KEY:?Set QP_API_KEY in .env}
+      QP_DB: /data/quantpilot.db
+      QP_STALE_SECONDS: ${QP_STALE_SECONDS:-180}
+      QP_EXPECTED_SOURCE: ${QP_EXPECTED_SOURCE:-quantpilot-main}
+      QP_EXPECTED_SYMBOLS: ${QP_EXPECTED_SYMBOLS:?Set the exact broker symbol names}
+    volumes:
+      - quantpilot_data:/data
+      - ./backups:/backup
+    expose: ["8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [backend]
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      QP_DOMAIN: ${QP_DOMAIN:?Set QP_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [backend]
+volumes:
+  quantpilot_data:
+    name: ${QP_DATA_VOLUME:-quantpilot_data_v4}
+  caddy_data:
+  caddy_config:
+networks:
+  backend:

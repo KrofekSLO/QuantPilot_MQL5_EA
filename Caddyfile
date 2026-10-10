@@ -1,0 +1,6 @@
+{$QP_DOMAIN} {
+    request_body {
+        max_size 512KB
+    }
+    reverse_proxy api:8000
+}
