@@ -394,7 +394,11 @@ void RepairHistory(SymbolState &s)
    ArraySetAsSeries(bars,false);
    int got=CopyRates(s.symbol,PERIOD_M1,1,InpReconcileBars,bars);
    if(got!=InpReconcileBars || SeriesInfoInteger(s.symbol,PERIOD_M1,SERIES_SYNCHRONIZED)==0)
-   { LogIssue(s,"repair history not ready; no cursor advancement"); return; }
+   {
+      LogIssue(s,"repair history not ready; no cursor advancement");
+      s.repair_at=GetTickCount64()+(ulong)InpReconcileIntervalSeconds*1000; // avoid re-reading a large range every timer cycle
+      return;
+   }
    int first=-1;
    for(int i=0;i<got;i++)
       if(bars[i].time>=s.start_t && bars[i].time>s.repair_t && bars[i].time<=s.last_t) { first=i; break; }
@@ -500,7 +504,19 @@ int OnInit()
       { Print("QuantPilot unavailable symbol: ",sym); missing=true; continue; }
       int k=ArraySize(g_states);
       ArrayResize(g_states,k+1);
+      // ArrayResize does not guarantee zeroed structure members: initialize every field explicitly.
       g_states[k].symbol=sym;
+      g_states[k].ready=false;
+      g_states[k].db_id="";
+      g_states[k].start_t=0;
+      g_states[k].last_t=0;
+      g_states[k].repair_t=0;
+      g_states[k].sync_at=0;
+      g_states[k].heartbeat_at=0;
+      g_states[k].retry_at=0;
+      g_states[k].repair_at=0;
+      g_states[k].log_at=0;
+      g_states[k].failures=0;
       g_states[k].digits=(int)SymbolInfoInteger(sym,SYMBOL_DIGITS);
       g_states[k].point=SymbolInfoDouble(sym,SYMBOL_POINT);
       for(int j=0;j<5;j++) g_states[k].handles[j]=INVALID_HANDLE;
