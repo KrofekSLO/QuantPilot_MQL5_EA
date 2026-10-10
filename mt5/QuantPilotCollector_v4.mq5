@@ -547,6 +547,12 @@ void OnDeinit(const int reason)
    ReleaseHandles();
 }
 
+// All work is driven by OnTimer; an empty OnTick satisfies the compiler's
+// "event handling function not found" check for Expert Advisors.
+void OnTick()
+{
+}
+
 void OnTimer()
 {
    int count=ArraySize(g_states);
